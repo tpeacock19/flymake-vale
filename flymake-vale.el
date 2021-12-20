@@ -48,12 +48,13 @@
   :prefix "flymake-vale-"
   :group 'tools)
 
-(defcustom flymake-vale-program "vale"
-  "The vale executable to use."
+(defcustom flymake-vale-program (executable-find "vale")
+  "The Vale executable to use."
   :type '(string)
   :group 'flymake-vale)
 
-(defconst flymake-vale-modes '(text-mode markdown-mode rst-mode org-mode))
+(defconst flymake-vale-modes '(text-mode latex-mode org-mode markdown-mode message-mode)
+  "List of major mode that work with Vale.")
 
 (defcustom flymake-vale-output-buffer "*flymake-vale*"
   "Buffer where tool output gets written."
@@ -88,13 +89,14 @@
   (let (check-list)
     (dolist (error errors)
       (let-alist error
-        (push (flymake-make-diagnostic
-               flymake-vale--source-buffer
-               (flymake-vale--pos-at-line-col .Line (- (car .Span) 1))
-               (flymake-vale--pos-at-line-col .Line   (cadr .Span))
-               (assoc-default .Severity flymake-vale--level-map 'string-equal 'error)
-               (concat .Message " [Vale]"))
-              check-list)))
+        (let ((check (split-string .Check "\\.")))
+          (push (flymake-make-diagnostic
+                 flymake-vale--source-buffer
+                 (flymake-vale--pos-at-line-col .Line (- (car .Span) 1))
+                 (flymake-vale--pos-at-line-col .Line   (cadr .Span))
+                 (assoc-default .Severity flymake-vale--level-map 'string-equal 'error)
+                 (format "%s [%s:%s]" .Message (car check) (cadr check)))
+                check-list))))
     check-list))
 
 (defun flymake-vale--output-to-errors (output)

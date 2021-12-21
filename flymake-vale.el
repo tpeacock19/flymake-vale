@@ -53,6 +53,11 @@
   :type '(string)
   :group 'flymake-vale)
 
+(defcustom flymake-vale-program-args nil
+  "Extra arguments to pass when running Vale."
+  :type '(string)
+  :group 'flymake-vale)
+
 (defconst flymake-vale-modes '(text-mode latex-mode org-mode markdown-mode message-mode)
   "List of major mode that work with Vale.")
 
@@ -80,7 +85,7 @@
 (defun flymake-vale--pos-at-line-col (l c)
   (save-excursion
     (goto-char (point-min))
-    (goto-line l)
+    (forward-line (- l 1))
     (move-to-column c)
     (point)))
 
@@ -100,13 +105,10 @@
     check-list))
 
 (defun flymake-vale--output-to-errors (output)
-  "Parse the full JSON output of vale, OUTPUT, into a sequence of flymake error structs."
+  "Parse the full JSON output of vale, OUTPUT, into a sequence of flymake error
+structs."
   (let* ((json-array-type 'list)
          (full-results (json-read-from-string output))
-
-         ;; Get the list of errors for each file.
-         (result-vecs (mapcar 'cdr full-results))
-
          ;; Chain all of the errors together. The point here, really, is that we
          ;; don't expect results from more than one file, but we should be
          ;; prepared for the theoretical possibility that the errors are somehow
@@ -140,16 +142,18 @@ Passing the results and source BUF to CALLBACK."
     (erase-buffer))
 
   (let* ((process-connection-type nil)
-         (proc (start-process "flymake-vale-process"
-                              flymake-vale-output-buffer
-                              flymake-vale-program
-                              "--output"
-                              "JSON")))
+         (proc (apply #'start-process
+                      "flymake-vale-process"
+                      flymake-vale-output-buffer
+                      flymake-vale-program
+                      "--output"
+                      "JSON"
+                      flymake-vale-program-args)))
     (let ((callback flymake-vale--report-fnc)
           (buf (current-buffer)))
       (set-process-sentinel
        proc
-       #'(lambda (process event)
+       #'(lambda (_ event)
            (when (flymake-vale--normal-completion? event)
              (flymake-vale--handle-finished callback buf)))))
 

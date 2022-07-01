@@ -43,6 +43,9 @@
 (require 'flymake)
 (require 'let-alist)
 
+(defvar json-array-type)
+(autoload #'json-read-from-string "json")
+
 (defgroup flymake-vale nil
   "Variables related to flymake-vale."
   :prefix "flymake-vale-"

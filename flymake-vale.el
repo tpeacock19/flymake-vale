@@ -162,6 +162,11 @@ check, either using the file extension or the major mode."
       `("--ext" ,(cond ((null file-name) (flymake-vale--guess-extension-from-mode major-mode))
                        (t (file-name-extension file-name t)))))))
 
+(defun flymake-vale--build-args ()
+  "Build arguments to pass to the vale executable."
+  (append flymake-vale-program-args
+          (flymake-vale--detect-extension)))
+
 ;;; Flymake
 
 (defun flymake-vale--start ()
@@ -181,9 +186,7 @@ check, either using the file extension or the major mode."
                       flymake-vale-program
                       "--output"
                       "JSON"
-                      (append
-                       flymake-vale-program-args
-                       (flymake-vale--detect-extension buf)))))
+                      (flymake-vale--build-args))))
     (setq flymake-vale--proc proc)
     (set-process-sentinel
      proc

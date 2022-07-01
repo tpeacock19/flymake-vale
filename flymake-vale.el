@@ -139,6 +139,30 @@ Passing the results and source BUF to CALLBACK."
   (or  (string-equal event "finished\n")
        (string-match "exited abnormally with code 1.*" event)))
 
+(defun flymake-vale--guess-extension-from-mode (mode)
+  "This is not good enough. At all.
+
+I don't know of a good way of getting the likely file extension of a
+major mode. The closest I found was the `auto-mode-alist' var, which
+has a regex value for all the file extensions which might match.
+
+Ideally, there'd be a way to generate a valid extension from the
+regexp, or there'd be a way of deciding a default suggested extension
+for a major-mode, but instead of wading in that right now and to prove
+the concept instead, I used this hack."
+  (let ((match (rassoc mode auto-mode-alist)))
+    (cond ((null match) ".txt")
+          (t (string-replace "?" "" (string-replace "'" "" (string-replace "\\" "" (car match))))))))
+
+(defun flymake-vale--detect-extension (buffer)
+  "Attempt to detect a file extension related to the buffer we wish to
+check, either using the file extension or the major mode."
+  (let ((file-name (buffer-file-name buffer)))
+    (let ((extension (with-current-buffer buffer
+                       (cond ((null file-name) (flymake-vale--guess-extension-from-mode major-mode))
+                             (t (format ".%s" (file-name-extension file-name)))))))
+      `("--ext" ,extension))))
+
 ;;; Flymake
 
 (defun flymake-vale--start ()
@@ -150,24 +174,24 @@ Passing the results and source BUF to CALLBACK."
   (when (process-live-p flymake-vale--proc)
     (kill-process flymake-vale--proc))
   (let* ((process-connection-type nil)
+         (callback flymake-vale--report-fnc)
+         (buf (current-buffer))
          (proc (apply #'start-process
                       "flymake-vale-process"
                       flymake-vale-output-buffer
                       flymake-vale-program
                       "--output"
                       "JSON"
-                      flymake-vale-program-args)))
+                      (append flymake-vale-program-args (flymake-vale--detect-extension (current-buffer))))))
     (setq flymake-vale--proc proc)
-    (let ((callback flymake-vale--report-fnc)
-          (buf (current-buffer)))
-      (set-process-sentinel
-       proc
-       #'(lambda (p event)
-           (when (flymake-vale--normal-completion? event)
-             (if (eq proc flymake-vale--proc)
-                 (flymake-vale--handle-finished callback buf)
-               (flymake-log :warning "Canceling obsolete check %s"
-                            proc))))))
+    (set-process-sentinel
+     proc
+     #'(lambda (p event)
+         (when (flymake-vale--normal-completion? event)
+           (if (eq proc flymake-vale--proc)
+               (flymake-vale--handle-finished callback buf)
+             (flymake-log :warning "Canceling obsolete check %s"
+                          proc)))))
     (process-send-region proc (point-min) (point-max))
     (process-send-eof proc)))
 

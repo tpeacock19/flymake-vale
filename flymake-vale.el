@@ -158,10 +158,9 @@ the concept instead, I used this hack."
   "Attempt to detect a file extension related to the buffer we wish to
 check, either using the file extension or the major mode."
   (let ((file-name (buffer-file-name buffer)))
-    (let ((extension (with-current-buffer buffer
-                       (cond ((null file-name) (flymake-vale--guess-extension-from-mode major-mode))
-                             (t (format ".%s" (file-name-extension file-name)))))))
-      `("--ext" ,extension))))
+    `("--ext" ,(with-current-buffer buffer
+                 (cond ((null file-name) (flymake-vale--guess-extension-from-mode major-mode))
+                       (t (format ".%s" (file-name-extension file-name))))))))
 
 ;;; Flymake
 

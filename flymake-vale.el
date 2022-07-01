@@ -181,7 +181,9 @@ check, either using the file extension or the major mode."
                       flymake-vale-program
                       "--output"
                       "JSON"
-                      (append flymake-vale-program-args (flymake-vale--detect-extension (current-buffer))))))
+                      (append
+                       flymake-vale-program-args
+                       (flymake-vale--detect-extension buf)))))
     (setq flymake-vale--proc proc)
     (set-process-sentinel
      proc

@@ -154,11 +154,11 @@ the concept instead, I used this hack."
     (cond ((null match) ".txt")
           (t (string-replace "?" "" (string-replace "'" "" (string-replace "\\" "" (car match))))))))
 
-(defun flymake-vale--detect-extension (buffer)
+(defun flymake-vale--detect-extension ()
   "Attempt to detect a file extension related to the buffer we wish to
 check, either using the file extension or the major mode."
-  (with-current-buffer buffer
-    (let ((file-name (buffer-file-name buffer)))
+  (with-current-buffer flymake-vale--source-buffer
+    (let ((file-name (buffer-file-name)))
       `("--ext" ,(cond ((null file-name) (flymake-vale--guess-extension-from-mode major-mode))
                        (t (file-name-extension file-name t)))))))
 

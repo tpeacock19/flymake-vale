@@ -61,7 +61,7 @@
 (defconst flymake-vale-modes '(text-mode latex-mode org-mode markdown-mode message-mode)
   "List of major mode that work with Vale.")
 
-(defcustom flymake-vale-output-buffer "*flymake-vale*"
+(defcustom flymake-vale-output-buffer " *flymake-vale*"
   "Buffer where tool output gets written."
   :type '(string)
   :group 'flymake-vale)
@@ -71,6 +71,9 @@
 
 (defvar-local flymake-vale--source-buffer nil
   "Current buffer we are currently using for grammar check.")
+
+(defvar-local flymake-vale--proc nil
+  "A buffer-local variable handling the vale process for flymake.")
 
 (defvar flymake-vale--report-fnc nil
   "Record report function/execution.")
@@ -100,7 +103,7 @@
                  (flymake-vale--pos-at-line-col .Line (- (car .Span) 1))
                  (flymake-vale--pos-at-line-col .Line   (cadr .Span))
                  (assoc-default .Severity flymake-vale--level-map 'string-equal 'error)
-                 (format "%s [%s:%s]" .Message (car check) (cadr check)))
+                 (format "%s [vale:%s:%s]" .Message (car check) (cadr check)))
                 check-list))))
     check-list))
 
@@ -118,7 +121,7 @@ structs."
     (flymake-vale--check-all errors)))
 
 (defun flymake-vale--handle-finished (callback buf)
-  "Parse the contents of the output buffer into flymake error structures. 
+  "Parse the contents of the output buffer into flymake error structures.
 Passing the results and source BUF to CALLBACK."
   (let* ((output (with-current-buffer flymake-vale-output-buffer
                    (buffer-string)))
@@ -126,7 +129,8 @@ Passing the results and source BUF to CALLBACK."
          (region (with-current-buffer buf
                    (cons (point-min) (point-max)))))
     ;; Fill in the rest of the error struct database
-    (funcall callback errors :region region)))
+    (funcall callback errors :region region)
+    (kill-buffer (process-buffer flymake-vale--proc))))
 
 (defun flymake-vale--normal-completion? (event)
   (or  (string-equal event "finished\n")
@@ -140,7 +144,8 @@ Passing the results and source BUF to CALLBACK."
   (with-current-buffer (get-buffer-create flymake-vale-output-buffer)
     (read-only-mode 0)
     (erase-buffer))
-
+  (when (process-live-p flymake-vale--proc)
+    (kill-process flymake-vale--proc))
   (let* ((process-connection-type nil)
          (proc (apply #'start-process
                       "flymake-vale-process"
@@ -149,14 +154,17 @@ Passing the results and source BUF to CALLBACK."
                       "--output"
                       "JSON"
                       flymake-vale-program-args)))
+    (setq flymake-vale--proc proc)
     (let ((callback flymake-vale--report-fnc)
           (buf (current-buffer)))
       (set-process-sentinel
        proc
-       #'(lambda (_ event)
+       #'(lambda (p event)
            (when (flymake-vale--normal-completion? event)
-             (flymake-vale--handle-finished callback buf)))))
-
+             (if (eq proc flymake-vale--proc)
+                 (flymake-vale--handle-finished callback buf)
+               (flymake-log :warning "Canceling obsolete check %s"
+                            proc))))))
     (process-send-region proc (point-min) (point-max))
     (process-send-eof proc)))
 

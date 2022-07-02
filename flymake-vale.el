@@ -78,6 +78,9 @@
 (defvar-local flymake-vale--proc nil
   "A buffer-local variable handling the vale process for flymake.")
 
+(defvar-local flymake-vale-file-ext nil
+  "A buffer-local variable providing extra file info to Vale for format-sensitive parsing.")
+
 (defvar flymake-vale--report-fnc nil
   "Record report function/execution.")
 
@@ -139,6 +142,19 @@ Passing the results and source BUF to CALLBACK."
   (or  (string-equal event "finished\n")
        (string-match "exited abnormally with code 1.*" event)))
 
+(defun flymake-vale--detect-extension ()
+  "Attempt to detect a file extension related to the buffer we wish to
+check, either using the file extension, or with the
+`flymake-vale-file-ext' variable."
+  (let* ((f (buffer-file-name flymake-vale--source-buffer))
+         (ext (or flymake-vale-file-ext (and f (file-name-extension f t)))))
+    (list (if ext (concat "--ext=" ext) ""))))
+
+(defun flymake-vale--build-args ()
+  "Build arguments to pass to the vale executable."
+  (append flymake-vale-program-args
+          (flymake-vale--detect-extension)))
+
 ;;; Flymake
 
 (defun flymake-vale--start ()
@@ -150,16 +166,16 @@ Passing the results and source BUF to CALLBACK."
   (when (process-live-p flymake-vale--proc)
     (kill-process flymake-vale--proc))
   (let* ((process-connection-type nil)
+         (callback flymake-vale--report-fnc)
+         (buf (current-buffer))
          (proc (apply #'start-process
                       "flymake-vale-process"
                       flymake-vale-output-buffer
                       flymake-vale-program
                       "--output"
                       "JSON"
-                      flymake-vale-program-args)))
+                      (flymake-vale--build-args))))
     (setq flymake-vale--proc proc)
-    (let ((callback flymake-vale--report-fnc)
-          (buf (current-buffer)))
       (set-process-sentinel
        proc
        #'(lambda (p event)
@@ -167,7 +183,7 @@ Passing the results and source BUF to CALLBACK."
              (if (eq proc flymake-vale--proc)
                  (flymake-vale--handle-finished callback buf)
                (flymake-log :warning "Canceling obsolete check %s"
-                            proc))))))
+                            proc)))))
     (process-send-region proc (point-min) (point-max))
     (process-send-eof proc)))
 

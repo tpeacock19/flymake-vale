@@ -72,7 +72,8 @@
   "A buffer-local variable handling the vale process for flymake.")
 
 (defvar-local flymake-vale-file-ext nil
-  "A buffer-local variable providing extra file info to Vale for format-sensitive parsing.")
+  "A buffer-local variable providing extra file info to Vale for format-sensitive
+parsing.")
 
 (defvar flymake-vale--report-fnc nil
   "Record report function/execution.")
@@ -173,14 +174,14 @@ check, either using the file extension, or with the
                       "JSON"
                       (flymake-vale--build-args))))
     (setq flymake-vale--proc proc)
-      (set-process-sentinel
-       proc
-       #'(lambda (p event)
-           (when (flymake-vale--normal-completion? event)
-             (if (eq proc flymake-vale--proc)
-                 (flymake-vale--handle-finished callback buf)
-               (flymake-log :warning "Canceling obsolete check %s"
-                            proc)))))
+    (set-process-sentinel
+     proc
+     #'(lambda (_p event)
+         (when (flymake-vale--normal-completion? event)
+           (if (eq proc flymake-vale--proc)
+               (flymake-vale--handle-finished callback buf)
+             (flymake-log :warning "Canceling obsolete check %s"
+                          proc)))))
     (process-send-region proc (point-min) (point-max))
     (process-send-eof proc)))
 

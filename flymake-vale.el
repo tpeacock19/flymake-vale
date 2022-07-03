@@ -1,6 +1,6 @@
 ;;; flymake-vale.el --- flymake integration for vale -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2021 Trey Peacock
+;; Copyright (C) 2022 Trey Peacock
 ;;
 ;; Author: Trey Peacock <http://github/tpeacock19>
 ;; Maintainer: Trey Peacock <git@treypeacock.com>
@@ -28,15 +28,8 @@
 ;;
 ;;; Commentary:
 ;;
-;; Description:
-;;
 ;; This provides flymake integration for vale. It allows flymake to
 ;; use vale to provide natural language linting.
-;;
-;; Basic usage:
-;;
-;;  (require 'flymake-vale)
-;;  (flymake-vale-setup)
 ;;
 ;;; Code:
 

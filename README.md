@@ -1,12 +1,24 @@
 # flymake-vale
 > Flymake support for Vale
 
-[Vale](https://github.com/ValeLint/vale) is a natural language linter. So with
-`flymake-vale` you get on-the-fly natural language linting.
+[Vale](https://github.com/ValeLint/vale) is a natural language linter. So with `flymake-vale` you get on-the-fly natural language linting.
 
 ## Quickstart
 
-Install `flymake-vale` from MELPA using `package-install` or something equivalent.
+Until `flymake-vale` is submitted to Elpa and/or Melpa, you can install
+it with Straight or cloning the repository:
+
+```emacs-lisp
+(straight-use-package
+ '(flymake-vale :type git :host github :repo "tpeacock19/flymake-vale"))
+```
+
+```bash
+cd path/to/custom/lisp
+git clone https://github.com/tpeacock19/flymake-vale
+(add-to-list 'load-path "path/to/custom/lisp/flymake-vale")
+```
+
 
 To use `flymake-vale` just `require` it and run `flymake-vale-setup`:
 
@@ -16,12 +28,12 @@ To use `flymake-vale` just `require` it and run `flymake-vale-setup`:
 ```
 
 
-## :floppy_disk: Installation
+## Installation
 
 The instruction to use this plugin.
 
-1. Install vale with package manager or download from https://github.com/errata-ai/vale/releases and
-   place in your $PATH.
+1. Install vale with package manager or download from https://github.com/errata-ai/vale/releases and place in your $PATH.
+
 2. Configure vale following its documentation https://docs.errata.ai/vale/config 
 3. Consider adding the following snippet to your configuration.
 
@@ -35,7 +47,7 @@ The instruction to use this plugin.
          (message-mode    . flymake-vale-load)))
 ```
 
-4. :tada: Done! Now open a text file and hit `M-x flymake-mode`!
+4. Now open a text file and hit `M-x flymake-mode`.
 
 otherwise you can call `flymake-vale-maybe-load` like the snippet below.
 

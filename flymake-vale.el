@@ -91,12 +91,16 @@
 
 ;;; Util
 
-(defun flymake-vale--pos-at-line-col (l c)
-  (save-excursion
+(defun flymake-vale--match-at-line (line match pos)
+  (with-current-buffer flymake-vale--source-buffer
     (goto-char (point-min))
-    (forward-line (- l 1))
-    (move-to-column c)
-    (point)))
+    (forward-line (- line 1))
+    (re-search-forward match)
+    (cond
+     ((eq 'start pos)
+      (match-beginning 0))
+     ((eq 'end pos)
+      (match-end 0)))))
 
 (defun flymake-vale--check-all (errors)
   "Parse ISSUES into flymake error structs."
@@ -106,8 +110,8 @@
         (let ((check (split-string .Check "\\.")))
           (push (flymake-make-diagnostic
                  flymake-vale--source-buffer
-                 (flymake-vale--pos-at-line-col .Line (- (car .Span) 1))
-                 (flymake-vale--pos-at-line-col .Line   (cadr .Span))
+                 (flymake-vale--match-at-line .Line .Match 'start)
+                 (flymake-vale--match-at-line .Line .Match 'end)
                  (assoc-default .Severity flymake-vale--level-map 'string-equal 'error)
                  (format "%s [vale:%s:%s]" .Message (car check) (cadr check)))
                 check-list))))

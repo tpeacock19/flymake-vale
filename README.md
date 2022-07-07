@@ -49,8 +49,8 @@ otherwise you can call `flymake-vale-maybe-load` like the snippet below.
 ## File Extensions
 
 Vale has support for text markup formats ([including org-mode
-support](https://github.com/errata-ai/vale/issues/330) soon!), but it
-needs to know the file extension so it can parse the content of the
+support](https://github.com/errata-ai/vale/releases/tag/v2.20.0)), but
+it needs to know the file extension so it can parse the content of the
 file, while ignoring the parts we don't want to check. By default, if
 the buffer is a file buffer, `flymake-vale` will use the file's
 extension.

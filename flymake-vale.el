@@ -87,14 +87,15 @@ parsing.")
 
 (defun flymake-vale--match-at-line (line match pos)
   (with-current-buffer flymake-vale--source-buffer
-    (goto-char (point-min))
-    (forward-line (- line 1))
-    (re-search-forward match)
-    (cond
-     ((eq 'start pos)
-      (match-beginning 0))
-     ((eq 'end pos)
-      (match-end 0)))))
+    (save-excursion
+      (goto-char (point-min))
+      (forward-line (- line 1))
+      (re-search-forward match)
+      (cond
+       ((eq 'start pos)
+        (match-beginning 0))
+       ((eq 'end pos)
+        (match-end 0))))))
 
 (defun flymake-vale--check-all (errors)
   "Parse ISSUES into flymake error structs."

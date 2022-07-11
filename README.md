@@ -51,28 +51,23 @@ otherwise you can call `flymake-vale-maybe-load` like the snippet below.
 Vale has support for text markup formats ([including org-mode
 support](https://github.com/errata-ai/vale/releases/tag/v2.20.0)), but
 it needs to know the file extension so it can parse the content of the
-file, while ignoring the parts we don't want to check. By default, if
-the buffer is a file buffer, `flymake-vale` will use the file's
-extension.
+file, while ignoring the parts we don't want to check. The current
+logic is to use in order of preference:
 
-You can set the extension manually with the `flymake-vale-file-ext`
-buffer local variable, and of particular note: you can combine this
-with a hook to provide flymake-vale support for new buffers.
-
+1. The buffer-local variable `flymake-vale-file-ext` if it is non nil.
+   This can be used to override and send your preferred extension.
 ```el
-(add-hook 'org-mode-hook '(lambda ()
-  (setq flymake-vale-file-ext ".org")
-  (flymake-vale-load)))
+(add-hook 'org-msg-mode-hook (lambda ()
+                               (setq flymake-vale-file-ext "org")
+                               (flymake-vale-load)))
+```
 
-(add-hook 'org-msg-mode-hook '(lambda ()
-  (setq flymake-vale-file-ext ".org")
-  (flymake-vale-load)))
+2. If the buffer is visiting a file, use that file's extension.
 
-(add-hook 'markdown-mode-hook '(lambda ()
-  (setq flymake-vale-file-ext ".md")
-  (flymake-vale-load)))
-
-(add-hook 'html-mode-hook '(lambda ()
-  (setq flymake-vale-file-ext ".html")
-  (flymake-vale-load)))
+3. If the buffer's `major-mode` is in the
+   `flymake-vale-mode-file-exts` alist then use its corresponding
+   extension. This currently includes all built-in scoping formats and
+   can be customized to include new modes like this:
+```el
+(add-to-list 'flymake-vale-mode-file-exts '(rust-mode . "rs"))
 ```

@@ -54,8 +54,35 @@
   :type '(string)
   :group 'flymake-vale)
 
-(defconst flymake-vale-modes '(text-mode latex-mode org-mode markdown-mode message-mode)
+(defcustom flymake-vale-modes '(text-mode latex-mode org-mode
+                                          markdown-mode message-mode)
   "List of major mode that work with Vale.")
+
+(defcustom flymake-vale-mode-file-exts '((markdown-mode . "md")
+                                         (gfm-mode . "md")
+                                         (html-mode . "html")
+                                         (rst-mode . "rst")
+                                         (adoc-mode . "asciidoc")
+                                         (xml-mode . "xml")
+                                         (org-mode . "org")
+                                         (text-mode . "txt")
+                                         (c-mode . "c")
+                                         (c++-mode . "cpp")
+                                         (css-mode . "css")
+                                         (go-mode . "go")
+                                         (haskell-mode . "hs")
+                                         (java-mode . "java")
+                                         (less-mode . "less")
+                                         (lua-mode . "lua")
+                                         (perl-mode . "pl")
+                                         (php-mode . "php")
+                                         (python-mode . "py")
+                                         (ess-r-mode . "r")
+                                         (ruby-mode . "rb")
+                                         (sass-mode . "sass")
+                                         (scala-mode . "scala")
+                                         (swift-mode . "swift"))
+  "An alist of major-modes with associated file extensions.")
 
 (defcustom flymake-vale-output-buffer " *flymake-vale*"
   "Buffer where tool output gets written."
@@ -146,8 +173,12 @@ Passing the results and source BUF to CALLBACK."
 check, either using the file extension, or with the
 `flymake-vale-file-ext' variable."
   (let* ((f (buffer-file-name flymake-vale--source-buffer))
-         (ext (or flymake-vale-file-ext (and f (file-name-extension f t)))))
-    (list (if ext (concat "--ext=" ext) ""))))
+         (ext (or flymake-vale-file-ext
+                  (and f (file-name-extension f))
+                  (alist-get (buffer-local-value
+                              'major-mode flymake-vale--source-buffer)
+                             flymake-vale-mode-file-exts))))
+    (list (if ext (concat "--ext=." ext) ""))))
 
 (defun flymake-vale--build-args ()
   "Build arguments to pass to the vale executable."

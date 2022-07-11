@@ -1,17 +1,23 @@
 # flymake-vale
 > Flymake support for Vale
 
-[Vale](https://github.com/ValeLint/vale) is a natural language linter. So with `flymake-vale` you get on-the-fly natural language linting.
+[Vale](https://github.com/ValeLint/vale) is a natural language linter.
+So with `flymake-vale` you get on-the-fly natural language linting.
 
 ## Installation
 
 The instruction to use this plugin.
 
-1. Install vale with package manager or download from https://github.com/errata-ai/vale/releases and place in your $PATH.
+1. Install Vale with package manager or download from
+   [Releases](https://github.com/errata-ai/vale/releases) and place in
+   your $PATH.
 
-2. Configure vale following its documentation https://docs.errata.ai/vale/config 
+2. Configure Vale following its documentation [Vale
+   Config](https://docs.errata.ai/vale/config)
 
-3. Install `flymake-vale`. Until it is submitted to Elpa and/or Melpa, you can install it with [Straight.el](https://github.com/radian-software/straight.el):
+3. Install `flymake-vale`. Until it is submitted to Elpa and/or Melpa,
+   you can install it with
+   [Straight.el](https://github.com/radian-software/straight.el):
 
 ```emacs-lisp
 (straight-use-package
@@ -71,3 +77,8 @@ logic is to use in order of preference:
 ```el
 (add-to-list 'flymake-vale-mode-file-exts '(rust-mode . "rs"))
 ```
+
+
+<!-- Local Variables: -->
+<!-- fill-column: 70 -->
+<!-- End: -->

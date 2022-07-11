@@ -9,7 +9,8 @@
 ;; Version: 0.0.1
 ;; Keywords:
 ;; Homepage: https://github.com/tpeacock19/new
-;; Package-Requires: ((emacs "24.4") (flymake "0.22") (let-alist "1.0.4"))
+;; Package-Requires: ((emacs "24.4") (flymake "0.22")
+;;  (let-alist "1.0.4"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -99,8 +100,8 @@
   "A buffer-local variable handling the vale process for flymake.")
 
 (defvar-local flymake-vale-file-ext nil
-  "A buffer-local variable providing extra file info to Vale for format-sensitive
-parsing.")
+  "A buffer-local variable providing file extension to Vale.
+The extension is necessary for Vale's format-sensitive parsing.")
 
 (defvar flymake-vale--report-fnc nil
   "Record report function/execution.")
@@ -134,27 +135,29 @@ parsing.")
                  flymake-vale--source-buffer
                  (flymake-vale--match-at-line .Line .Match 'start)
                  (flymake-vale--match-at-line .Line .Match 'end)
-                 (assoc-default .Severity flymake-vale--level-map 'string-equal 'error)
-                 (format "%s [vale:%s:%s]" .Message (car check) (cadr check)))
+                 (assoc-default .Severity flymake-vale--level-map
+                                'string-equal 'error)
+                 (format "%s [vale:%s:%s]" .Message
+                         (car check) (cadr check)))
                 check-list))))
     check-list))
 
 (defun flymake-vale--output-to-errors (output)
-  "Parse the full JSON output of vale, OUTPUT, into a sequence of flymake error
-structs."
+  "Parse the full JSON OUTPUT of vale.
+Converts output into a sequence of flymake error structs."
   (let* ((json-array-type 'list)
          (full-results (json-read-from-string output))
-         ;; Chain all of the errors together. The point here, really, is that we
-         ;; don't expect results from more than one file, but we should be
-         ;; prepared for the theoretical possibility that the errors are somehow
-         ;; split across multiple files. This is basically a punt in lieu of
-         ;; more information.
+         ;; Chain all of the errors together. The point here, really, is
+         ;; that we don't expect results from more than one file, but we
+         ;; should be prepared for the theoretical possibility that the
+         ;; errors are somehow split across multiple files. This is
+         ;; basically a punt in lieu of more information.
          (errors (apply 'append (mapcar 'cdr full-results))))
     (flymake-vale--check-all errors)))
 
 (defun flymake-vale--handle-finished (callback buf)
-  "Parse the contents of the output buffer into flymake error structures.
-Passing the results and source BUF to CALLBACK."
+  "Parse contents and pass results and source BUF to
+ CALLBACK."
   (let* ((output (with-current-buffer flymake-vale-output-buffer
                    (buffer-string)))
          (errors (flymake-vale--output-to-errors output))
@@ -169,8 +172,8 @@ Passing the results and source BUF to CALLBACK."
        (string-match "exited abnormally with code 1.*" event)))
 
 (defun flymake-vale--detect-extension ()
-  "Attempt to detect a file extension related to the buffer we wish to
-check, either using the file extension, or with the
+  "Attempt to detect a file extension related to the buffer we
+ wish to check, either using the file extension, or with the
 `flymake-vale-file-ext' variable."
   (let* ((f (buffer-file-name flymake-vale--source-buffer))
          (ext (or flymake-vale-file-ext
@@ -228,15 +231,23 @@ check, either using the file extension, or with the
 ;;;###autoload
 (defun flymake-vale-load ()
   "Convenience function to setup flymake-vale.
-This adds the vale checker to the list of flymake diagnostic functions."
-  (add-hook 'flymake-diagnostic-functions #'flymake-vale--checker nil t))
+This adds the vale checker to the list of flymake diagnostic
+functions."
+  (add-hook 'flymake-diagnostic-functions #'flymake-vale--checker
+            nil t))
 
 ;;;###autoload
 (defun flymake-vale-maybe-load ()
-  "Call `flymake-vale-load' if this file appears to be check for grammar."
+  "Call `flymake-vale-load' when file should be checked for
+ grammar."
   (interactive)
   (when (memq major-mode flymake-vale-modes)
     (flymake-vale-load)))
 
 (provide 'flymake-vale)
 ;;; flymake-vale.el ends here
+
+;; Local Variables:
+;; fill-column: 72
+;; emacs-lisp-docstring-fill-column: 65
+;; End:

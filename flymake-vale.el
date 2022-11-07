@@ -146,7 +146,9 @@ The extension is necessary for Vale's format-sensitive parsing.")
   "Parse the full JSON OUTPUT of vale.
 Converts output into a sequence of flymake error structs."
   (let* ((json-array-type 'list)
-         (full-results (json-read-from-string output))
+         (json-out (unless (string-prefix-p "{" output)
+                     (substring output (string-match "\n{" output))))
+         (full-results (json-read-from-string (or json-out output)))
          ;; Chain all of the errors together. The point here, really, is
          ;; that we don't expect results from more than one file, but we
          ;; should be prepared for the theoretical possibility that the

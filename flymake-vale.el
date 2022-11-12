@@ -36,9 +36,7 @@
 
 (require 'flymake)
 (require 'let-alist)
-
-(defvar json-array-type)
-(autoload #'json-read-from-string "json")
+(require 'json)
 
 (defgroup flymake-vale nil
   "Variables related to flymake-vale."
@@ -57,7 +55,9 @@
 
 (defcustom flymake-vale-modes '(text-mode latex-mode org-mode
                                           markdown-mode message-mode)
-  "List of major mode that work with Vale.")
+  "List of major mode that work with Vale."
+  :type 'list
+  :group 'flymake-vale)
 
 (defcustom flymake-vale-mode-file-exts '((markdown-mode . "md")
                                          (gfm-mode . "md")
@@ -83,7 +83,9 @@
                                          (sass-mode . "sass")
                                          (scala-mode . "scala")
                                          (swift-mode . "swift"))
-  "An alist of major-modes with associated file extensions.")
+  "An alist of major-modes with associated file extensions."
+  :type 'list
+  :group 'flymake-vale)
 
 (defcustom flymake-vale-output-buffer " *flymake-vale*"
   "Buffer where tool output gets written."
@@ -149,11 +151,6 @@ Converts output into a sequence of flymake error structs."
          (json-out (unless (string-prefix-p "{" output)
                      (substring output (string-match "\n{" output))))
          (full-results (json-read-from-string (or json-out output)))
-         ;; Chain all of the errors together. The point here, really, is
-         ;; that we don't expect results from more than one file, but we
-         ;; should be prepared for the theoretical possibility that the
-         ;; errors are somehow split across multiple files. This is
-         ;; basically a punt in lieu of more information.
          (errors (apply 'append (mapcar 'cdr full-results))))
     (flymake-vale--check-all errors)))
 
@@ -162,16 +159,19 @@ Converts output into a sequence of flymake error structs."
  CALLBACK."
   (let* ((output (with-current-buffer flymake-vale-output-buffer
                    (buffer-string)))
-         (errors (flymake-vale--output-to-errors output))
          (region (with-current-buffer buf
                    (cons (point-min) (point-max)))))
-    ;; Fill in the rest of the error struct database
-    (funcall callback errors :region region)
+    (if-let ((errors (flymake-vale--proc-error-p output)))
+        (funcall callback :panic :explanation errors)
+      (funcall callback (flymake-vale--output-to-errors output)
+               :region region))
     (kill-buffer (process-buffer flymake-vale--proc))))
 
-(defun flymake-vale--normal-completion? (event)
-  (or  (string-equal event "finished\n")
-       (string-match "exited abnormally with code 1.*" event)))
+(defun flymake-vale--proc-error-p (output)
+  (let-alist (ignore-errors (json-read-from-string output))
+    (when (and (stringp .Code)
+               (string-match-p  "E[0-9]\\{3\\}$" .Code))
+      (string-replace  "\n" " " .Text))))
 
 (defun flymake-vale--detect-extension ()
   "Attempt to detect a file extension related to the buffer we
@@ -213,12 +213,12 @@ Converts output into a sequence of flymake error structs."
     (setq flymake-vale--proc proc)
     (set-process-sentinel
      proc
-     #'(lambda (_p event)
-         (when (flymake-vale--normal-completion? event)
-           (if (eq proc flymake-vale--proc)
+     #'(lambda (p event)
+         (when (eq 'exit (process-status p))
+           (if (eq p flymake-vale--proc)
                (flymake-vale--handle-finished callback buf)
              (flymake-log :warning "Canceling obsolete check %s"
-                          proc)))))
+                          p)))))
     (process-send-region proc (point-min) (point-max))
     (process-send-eof proc)))
 

@@ -32,25 +32,33 @@ git clone https://github.com/tpeacock19/flymake-vale
 (add-to-list 'load-path "path/to/custom/lisp/flymake-vale")
 ```
 
-4. Consider adding the following snippet to your configuration.
+## Enabling Backend
+
+
+You can add `flymake-vale` as a backend to specific modes by adding
+`flymake-vale-load` to the relevant hook:
 
 ```el
-(use-package flymake-vale
-  :ensure t
-  :hook ((text-mode       . flymake-vale-load)
-         (latex-mode      . flymake-vale-load)
-         (org-mode        . flymake-vale-load)
-         (markdown-mode   . flymake-vale-load)
-         (message-mode    . flymake-vale-load)))
+(add-hook 'text-mode-hook #'flymake-vale-load)
+(add-hook 'latex-mode-hook #'flymake-vale-load)
+(add-hook 'org-mode-hook #'flymake-vale-load)
+(add-hook 'markdown-mode-hook #'flymake-vale-load)
+(add-hook 'message-mode-hook #'flymake-vale-load)
 ```
 
-5. Now open a text file and hit `M-x flymake-mode`.
-
-otherwise you can call `flymake-vale-maybe-load` like the snippet below.
+You can also have `flymake-vale` load automatically upon opening a
+file when that file's major mode is in `flymake-vale-modes`:
 
 ```el
 (add-hook 'find-file-hook 'flymake-vale-maybe-load)
+;; flymake-vale-modes defaults to: 
+;;  => (text-mode latex-mode org-mode markdown-mode message-mode)
+
+(add-to-list 'flymake-vale-modes 'adoc-mode)
 ```
+
+Now open a text file and enable flymake (`M-x flymake-mode`).
+
 
 ## File Extensions
 

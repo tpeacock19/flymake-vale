@@ -115,28 +115,19 @@ The extension is necessary for Vale's format-sensitive parsing.")
 
 ;;; Util
 
-(defun flymake-vale--match-at-line (line match pos)
-  (with-current-buffer flymake-vale--source-buffer
-    (save-excursion
-      (goto-char (point-min))
-      (forward-line (- line 1))
-      (re-search-forward match)
-      (cond
-       ((eq 'start pos)
-        (match-beginning 0))
-       ((eq 'end pos)
-        (match-end 0))))))
-
 (defun flymake-vale--check-all (errors)
-  "Parse ISSUES into flymake error structs."
+  "Parse ERRORS into flymake error structs."
   (let (check-list)
     (dolist (error errors)
       (let-alist error
-        (let ((check (split-string .Check "\\.")))
+        (let ((check (split-string .Check "\\."))
+              (pos (save-excursion
+                     (goto-line .Line)
+                     (forward-char (1- (car .Span)))
+                     (cons (point) (+ (point) (length .Match))))))
           (push (flymake-make-diagnostic
                  flymake-vale--source-buffer
-                 (flymake-vale--match-at-line .Line .Match 'start)
-                 (flymake-vale--match-at-line .Line .Match 'end)
+                 (car pos) (cdr pos)
                  (assoc-default .Severity flymake-vale--level-map
                                 'string-equal 'error)
                  (format "%s [vale:%s:%s]" .Message
@@ -154,20 +145,8 @@ Converts output into a sequence of flymake error structs."
          (errors (apply 'append (mapcar 'cdr full-results))))
     (flymake-vale--check-all errors)))
 
-(defun flymake-vale--handle-finished (callback buf)
-  "Parse contents and pass results and source BUF to
- CALLBACK."
-  (let* ((output (with-current-buffer flymake-vale-output-buffer
-                   (buffer-string)))
-         (region (with-current-buffer buf
-                   (cons (point-min) (point-max)))))
-    (if-let ((errors (flymake-vale--proc-error-p output)))
-        (funcall callback :panic :explanation errors)
-      (funcall callback (flymake-vale--output-to-errors output)
-               :region region))
-    (kill-buffer (process-buffer flymake-vale--proc))))
-
 (defun flymake-vale--proc-error-p (output)
+  "Check if Vale returned in error in OUTPUT."
   (let-alist (ignore-errors (json-read-from-string output))
     (when (and (stringp .Code)
                (string-match-p  "E[0-9]\\{3\\}$" .Code))
@@ -194,33 +173,36 @@ Converts output into a sequence of flymake error structs."
 
 (defun flymake-vale--start ()
   "Run vale on the current buffer's contents."
-  ;; Clear the output buffer
-  (with-current-buffer (get-buffer-create flymake-vale-output-buffer)
-    (read-only-mode 0)
-    (erase-buffer))
   (when (process-live-p flymake-vale--proc)
     (kill-process flymake-vale--proc))
-  (let* ((process-connection-type nil)
-         (callback flymake-vale--report-fnc)
-         (buf (current-buffer))
-         (proc (apply #'start-process
-                      "flymake-vale-process"
-                      flymake-vale-output-buffer
-                      flymake-vale-program
-                      "--output"
-                      "JSON"
-                      (flymake-vale--build-args))))
-    (setq flymake-vale--proc proc)
-    (set-process-sentinel
-     proc
-     #'(lambda (p event)
-         (when (eq 'exit (process-status p))
-           (if (eq p flymake-vale--proc)
-               (flymake-vale--handle-finished callback buf)
-             (flymake-log :warning "Canceling obsolete check %s"
-                          p)))))
-    (process-send-region proc (point-min) (point-max))
-    (process-send-eof proc)))
+  (let* ((source (current-buffer)))
+    (setq
+     flymake-vale--proc
+     (make-process
+      :name "flymake-vale-process"
+      :noquery t :connection-type 'pipe
+      :buffer (generate-new-buffer flymake-vale-output-buffer)
+      :command `(,flymake-vale-program
+                 "--output" "JSON" ,@(flymake-vale--build-args))
+      :sentinel
+      (lambda (proc event)
+        (when (eq 'exit (process-status proc))
+          (unwind-protect
+              (if (eq proc flymake-vale--proc)
+                  (if-let*
+                      ((output
+                        (with-current-buffer (process-buffer proc)
+                          (buffer-string)))
+                       (errors (flymake-vale--proc-error-p output)))
+                      (funcall flymake-vale--report-fnc
+                               :panic :explanation errors)
+                    (funcall flymake-vale--report-fnc
+                             (flymake-vale--output-to-errors output)))
+                (flymake-log :warning "Canceling obsolete check %s"
+                             p))
+            (kill-buffer (process-buffer flymake-vale--proc)))))))
+    (process-send-region flymake-vale--proc (point-min) (point-max))
+    (process-send-eof flymake-vale--proc)))
 
 (defun flymake-vale--checker (report-fn &rest _args)
   "Diagnostic checker function with REPORT-FN."

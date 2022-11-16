@@ -122,7 +122,8 @@ The extension is necessary for Vale's format-sensitive parsing.")
       (let-alist error
         (let ((check (split-string .Check "\\."))
               (pos (save-excursion
-                     (goto-line .Line)
+                     (goto-char (point-min))
+                     (forward-line (1- .Line))
                      (forward-char (1- (car .Span)))
                      (cons (point) (+ (point) (length .Match))))))
           (push (flymake-make-diagnostic
@@ -135,7 +136,7 @@ The extension is necessary for Vale's format-sensitive parsing.")
                 check-list))))
     check-list))
 
-(defun flymake-vale--output-to-errors (output)
+(defun flymake-vale--output-to-errors (output source)
   "Parse the full JSON OUTPUT of vale.
 Converts output into a sequence of flymake error structs."
   (let* ((json-array-type 'list)
@@ -143,14 +144,22 @@ Converts output into a sequence of flymake error structs."
                      (substring output (string-match "\n{" output))))
          (full-results (json-read-from-string (or json-out output)))
          (errors (apply 'append (mapcar 'cdr full-results))))
-    (flymake-vale--check-all errors)))
+    (with-current-buffer source (flymake-vale--check-all errors))))
 
-(defun flymake-vale--proc-error-p (output)
+(defun flymake-vale--proc-error-p (output proc source report-fn)
   "Check if Vale returned in error in OUTPUT."
-  (let-alist (ignore-errors (json-read-from-string output))
-    (when (and (stringp .Code)
-               (string-match-p  "E[0-9]\\{3\\}$" .Code))
-      (string-replace  "\n" " " .Text))))
+  (with-current-buffer source
+    (pcase output
+      ;; empty string most likely means process was closed by a new
+      ;; flymake check
+      ((pred string-empty-p)
+       (flymake-log :warning "Canceling obsolete check %s" (process-buffer proc)))
+      (_ (let-alist (ignore-errors (json-read-from-string output))
+           (when (and (stringp .Code)
+                      (string-match-p  "E[0-9]\\{3\\}$" .Code))
+             (funcall report-fn
+                      :panic :explanation (string-replace  "\n" " " .Text))
+             t))))))
 
 (defun flymake-vale--detect-extension ()
   "Attempt to detect a file extension related to the buffer we
@@ -171,10 +180,16 @@ Converts output into a sequence of flymake error structs."
 
 ;;; Flymake
 
-(defun flymake-vale--start ()
+(defun flymake-vale--start (report-fn)
   "Run vale on the current buffer's contents."
+  ;; kill and cleanup any ongoing processes. This is meant to be more
+  ;; performant instead of checking when the vale process finishes.
   (when (process-live-p flymake-vale--proc)
-    (kill-process flymake-vale--proc))
+    (flymake-log :warning "Canceling the obsolete check %s"
+                 (process-buffer flymake-vale--proc))
+    (kill-buffer (process-buffer flymake-vale--proc))
+    (delete-process flymake-vale--proc)
+    (setq flymake-vale--proc nil))
   (let* ((source (current-buffer)))
     (setq
      flymake-vale--proc
@@ -185,30 +200,28 @@ Converts output into a sequence of flymake error structs."
       :command `(,flymake-vale-program
                  "--output" "JSON" ,@(flymake-vale--build-args))
       :sentinel
-      (lambda (proc event)
+      (lambda (proc _event)
         (when (eq 'exit (process-status proc))
           (unwind-protect
-              (if (eq proc flymake-vale--proc)
-                  (if-let*
-                      ((output
-                        (with-current-buffer (process-buffer proc)
-                          (buffer-string)))
-                       (errors (flymake-vale--proc-error-p output)))
-                      (funcall flymake-vale--report-fnc
-                               :panic :explanation errors)
-                    (funcall flymake-vale--report-fnc
-                             (flymake-vale--output-to-errors output)))
-                (flymake-log :warning "Canceling obsolete check %s"
-                             p))
-            (kill-buffer (process-buffer flymake-vale--proc)))))))
+              (if (with-current-buffer source (eq proc flymake-vale--proc))
+                  (with-current-buffer (process-buffer proc)
+                    (let ((output (buffer-string)))
+                      (or (flymake-vale--proc-error-p output proc source report-fn)
+                          (funcall report-fn (flymake-vale--output-to-errors
+                                              output source)))))
+                (with-current-buffer source
+                  (flymake-log :warning "Canceling obsolete check %s"
+                               (process-buffer proc))))
+            (with-current-buffer source
+              (kill-buffer (process-buffer flymake-vale--proc))
+              (setq flymake-vale--proc nil)))))))
     (process-send-region flymake-vale--proc (point-min) (point-max))
     (process-send-eof flymake-vale--proc)))
 
 (defun flymake-vale--checker (report-fn &rest _args)
   "Diagnostic checker function with REPORT-FN."
-  (setq flymake-vale--report-fnc report-fn)
   (setq flymake-vale--source-buffer (current-buffer))
-  (flymake-vale--start))
+  (flymake-vale--start report-fn))
 
 ;;; Entry
 

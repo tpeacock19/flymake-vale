@@ -9,8 +9,8 @@
 ;; Version: 0.0.2
 ;; Keywords:
 ;; Homepage: https://github.com/tpeacock19/new
-;; Package-Requires: ((emacs "24.4") (flymake "0.22")
-;;  (let-alist "1.0.4"))
+;; Package-Requires: ((emacs "27.1") (flymake "0.22")
+;;  (let-alist "1.0.4") (compat "29.1.4.4"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -34,6 +34,7 @@
 ;;
 ;;; Code:
 
+(require 'compat)
 (require 'flymake)
 (require 'let-alist)
 (require 'json)
@@ -231,7 +232,10 @@ A positive ARG will return end point ARG number sentence following PT."
     (save-excursion
       sentence-end-double-space
       (goto-char pt)
-      (funcall forward-sentence-function arg))))
+      (funcall (or (and (boundp 'forward-sentence-function)
+                        forward-sentence-function)
+                   #'forward-sentence)
+               arg))))
 
 (defun flymake-vale--setup ()
   "Used to reset the checked state of the current buffer."

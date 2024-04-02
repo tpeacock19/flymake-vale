@@ -35,9 +35,10 @@
 ;;; Code:
 
 (require 'compat)
-(require 'flymake)
-(require 'let-alist)
+(eval-when-compile
+  (require 'let-alist))
 (require 'json)
+(require 'flymake)
 
 (defgroup flymake-vale nil
   "Variables related to flymake-vale."

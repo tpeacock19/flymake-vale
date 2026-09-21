@@ -58,7 +58,8 @@
 (defcustom flymake-vale-modes '(text-mode latex-mode org-mode
                                           markdown-mode message-mode)
   "List of major mode that work with Vale."
-  :type 'list
+  :type '(repeat
+          (symbol :tag "major-mode"))
   :group 'flymake-vale)
 
 (defcustom flymake-vale-mode-file-exts '((markdown-mode . "md")
@@ -86,7 +87,9 @@
                                          (scala-mode . "scala")
                                          (swift-mode . "swift"))
   "An alist of major-modes with associated file extensions."
-  :type 'list
+  :type '(repeat
+          (cons (symbol :tag "major-mode")
+                (string :tag "file extension")))
   :group 'flymake-vale)
 
 (defcustom flymake-vale-output-buffer " *flymake-vale*"

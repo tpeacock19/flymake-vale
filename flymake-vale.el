@@ -210,7 +210,6 @@ Converts output into a sequence of flymake error structs."
 	       ((and proc-current (stringp err))
 		(funcall report-fn :panic :explanation err))
 	       (proc-current
-		(message " current buffer: %s" (current-buffer))
 		(funcall report-fn (flymake-vale--output-to-errors
 				    output source start)
                          :region (cons start end))

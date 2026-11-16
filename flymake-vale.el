@@ -52,7 +52,7 @@
 
 (defcustom flymake-vale-program-args nil
   "Extra arguments to pass when running Vale."
-  :type '(string)
+  :type '(repeat string)
   :group 'flymake-vale)
 
 (defcustom flymake-vale-modes '(text-mode latex-mode org-mode
